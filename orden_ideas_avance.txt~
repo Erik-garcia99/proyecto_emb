@@ -1,0 +1,70 @@
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-> el sistema estara encargado de monitorear la temperatura en un laboratorio
+en el cual el control de acceso asi como de los cambios ambientales son
+importantes, dado que es un lugar critico no se puede dar acceso a cualquier
+persona solo personal certificado y las temperatiuras dentro deben ser las
+ideales puesto que se esta trabajando con productos que deben estar bajo
+ciertas condiciones por lo que el cambio bursco de temepratura o de la humedad
+de este puede afectar a lo que se este trabajando. 
+
+-> el sistema estara bloqueado mediante una identificacion RFID no se podra
+entrar al sismtema que controla el ambiente sin las credenciales 
+
+-> el nodo que registra la temperatura estara actualizando la temperatura que
+se esta leyendo cada 30 segundos - 1 minuto (aun se esta deciendio el rango)
+
+-> el sistema tiene la posibilidad de activar manualmente mecanismos si la
+tmeperatura esta subinedo motores (represetnacion de venitladores) los cuales
+ayudaran a refrescar 
+
+-> sistema automatico que relaiza esa operacion cuando se alcance cierto
+umbral el sisteam activara los mecanimos que ayudan a enfirar o calentar el
+entorno dependindo lo que se esta leyendo 
+
+-> registro de los eventos 
+
+
+
+-> el ESP AP estara en modo ligth-sleep cnado no hay clientes web conectados a
+el.
+
+
+####-> se podria agregar leds que represetnetel el estado del sistema ( una
+idea) 
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+el orden de los proyectos y para que funciona cada uno es: 
+
+proyecto "proyecto_ESP_AP" -> es el que tiene el servidor web con el que se
+muestra en la informacion de los otros ESP
+
+proyecto "project_ESP_READ_TMP" es el proyecto del ESP que estara leyendo la
+temperattura por medio de I2C o SPI pero creo que sera por I2C porque ya tengo
+el codigo hecho realmente, por medio del sentor LM75AB 
+
+proyecto "project_ESP_READ_IDENT" es el proyecto del ESP que leera por medio
+de SPI el RFID de lar tarjetas que daran acceso al sistema.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+
+
+
+
+

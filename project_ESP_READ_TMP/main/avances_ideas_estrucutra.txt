@@ -1,0 +1,26 @@
+-> anotamos los avances, los pendientes, ideas, o cosas que necesita el codigo. 
+
+
+-> ESP que se encarga del I2C-> sensor LM75AB 
+
+-> entonces necesito leer del sensor y mandar por medio de UART los datos leidos al ESP masestro. 
+
+--> entonces necesito 2 archivos .c uno que se encarga de ser el maestro esntre el ESP -> sensor 
+    otro que se encargue de ser el escalvo entre el ESP y el ESP_AP 
+
+
+--> LOGICA DEL FUNCIONAMINETO 
+
+--> en la practica teniamos un procolo de lectura, el cual era de cunado se el maestreo pedia una lectrua enviava por I2C un mensaje por medio de un protocolo que se
+    establecia y lo mismo pasaba con la respuesta. lo cual no se necesita en el proyecto, porque si enviara los datos pero los estara enviando un un periodo x de tiempo 
+    puede ser. 
+
+
+
+
+
+
+
+%%%%%%%%%tratar de mejorar 
+
+el I2C tiene la API viejita tratemos que integrar la API nueva, si es que podemos 
