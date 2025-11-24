@@ -16,20 +16,6 @@
     puede ser. 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%LOGIC 
-
--> leer sensor 
-->tratar el resultado para sacar el valor real 
--> envar por uart al ESP AP 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%UART
-
-->utilizaremos UART 1 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 
 
@@ -38,13 +24,3 @@
 %%%%%%%%%tratar de mejorar 
 
 el I2C tiene la API viejita tratemos que integrar la API nueva, si es que podemos 
-
-%%%%%%%%%%%%%ERRORES 
-
--> al parecer le sensor esta mal, por lo que hay que tratar de relizar lo
-mismo pero con el otro sensor a ver si el otro lee la lectura de manera
-correcta.
-
-
-
-
