@@ -22,8 +22,6 @@
 #include<esp_netif.h>
 #include<esp_http_server.h>
 
-
-
 //drivers 
 #include<driver/uart.h>
 
@@ -50,9 +48,7 @@ QueueHandle_t send_temp;
 
 static const char *TAG = "ESP_AP";
 
-
 //funciones 
-
 extern void send_temperature_to_clients(const char* temp);
 extern void notify_new_temperature(void);
 
@@ -63,6 +59,20 @@ extern void notify_new_temperature(void);
 void show_tmep_task(void *params);
 void uart_task_read_temp(void *params);
 
+//tareas RFID
+void receive_RFID_task();
+uint8_t compare_RFID();
+
+//BUFFER RFID
+char buffer_RFID[128];   
+
+//LLAVES
+#define KEYS 2
+#define uid_len 12
+char llaves[KEYS][uid_len] = {
+    "E3:14:49:01",
+    "EA:9A:CD:05",
+};
 
 
 
@@ -103,10 +113,14 @@ void app_main(void)
     xTaskCreate(uart_task_read_temp, "uart_task", 4098, NULL, 10, NULL);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+        
 
 
     // xTaskCreate(task_main,"task_main", 4098, NULL, 8, NULL);
     xTaskCreate(show_tmep_task, "show_tmp", 2048, NULL, 9, NULL);
+
+    //TAREA RECIBIR RFID
+    xTaskCreate(receive_RFID_task, "Receive_RFID",2048,NULL,5,NULL); //recibe RFID
 
 }
 
@@ -210,3 +224,35 @@ void show_tmep_task(void *params){
     }
 }
 
+uint8_t compare_RFID()
+{
+    for (int j = 0; j < KEYS; j++)
+    {
+        if (strcmp(buffer_RFID, llaves[j]) == 0)
+        {
+            ESP_LOGI(TAG, "ACCESO PERMITIDO");
+            return 1;
+        }
+    }
+
+    ESP_LOGI(TAG, "ACCESO DENEGADO");
+    return 0;
+}
+
+void receive_RFID_task()
+{
+    uint8_t data[12];
+
+    while(1){
+
+        int len = uart_read_bytes(UART_NUM_2, data, 11, portMAX_DELAY);
+
+        if (len > 0) {
+            data[len] = '\0';              // terminar la cadena recibida
+            strcpy(buffer_RFID, (char*)data);   // guardar en la variable global
+        }
+
+        ESP_LOGI(TAG, "UARTO-2 RFID recibido: %s", buffer_RFID);
+        compare_RFID();
+    }
+}
