@@ -1,0 +1,2 @@
+la funcion de la libreia de GPIO sera como el ilustrar un actuador sobre las
+lectura del snesor como simunar un ventilador y su potencia.

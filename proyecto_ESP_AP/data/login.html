@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>labSAFE - Acceso</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="login-container">
+        <h1>labSAFE</h1>
+        <p class="subtitle">Sistema de Gestion de Temperatura</p>
+        
+        <form action="/login" method="POST">
+            <div class="input-group">
+                <label for="rfid">Identificación RFID:</label>
+                <input type="text" id="rfid" name="rfid" required 
+                       placeholder="Acerca tu tarjeta RFID">
+            </div>
+            
+            <button type="submit">ACCEDER</button>
+        </form>
+        
+        <p class="info">* Para prueba: ingresa "RFID123"</p>
+        
+        <div id="error-message" class="error">
+            <p>Acceso denegado. Tarjeta no valida.</p>
+        </div>
+    </div>
+
+    <script>
+        // Mostrar error si existe en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.has('error')){
+            document.getElementById('error-message').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

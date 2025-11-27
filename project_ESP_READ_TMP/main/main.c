@@ -32,7 +32,7 @@
 #define ACK_CHECK_EN 0x1
 
 //UART
-#define NUM_UART UART_NUM_0
+#define NUM_UART UART_NUM_1
 #define TX_PIN 18
 #define RX_PIN 19
 
@@ -61,6 +61,7 @@ void main_task(void *params);
 
 void app_main(void)
 {
+
     
     i2c_master_init(I2C_PORT, I2C_SDA_IO,I2C_SCL_IO, SPEED);
     init_uart(NUM_UART,TX_PIN, RX_PIN, UART_DATA_8_BITS,UART_PARITY_DISABLE, UART_STOP_BITS_1);
@@ -79,19 +80,32 @@ void main_task(void *params){
 
 
         if(read_sens_tmp(&tmp)){
-            ESP_LOGI(TAG, "dato leido: %d.%d", tmp.integer, tmp.decimal);
+            // ESP_LOGI(TAG, "dato leido: %d.%d", tmp.integer, tmp.decimal);
 
-            //una vez que ya de haya leido mandamos por medio de uart, como como saber de que tamanio sera nuestra temperatira, creo que lo mejor seria man
-            //convertimos nuestro dato en ASCII para r enviado por UART 
+            // //una vez que ya de haya leido mandamos por medio de uart, como como saber de que tamanio sera nuestra temperatira, creo que lo mejor seria man
+            // //convertimos nuestro dato en ASCII para r enviado por UART 
 
-            char buff[11]; //un buffer de 2 bytes no creo que ocue mas 
+            // char buff[11]; //un buffer de 2 bytes no creo que ocue mas 
 
-            sprintf(buff,"%d.%d",tmp.integer, tmp.decimal);
-            //enviamos por uart 
-            uart_write_bytes(NUM_UART, (const char*)buff, strlen(buff)); 
+            // sprintf(buff,"%d.%d",tmp.integer, tmp.decimal);
+            // //enviamos por uart 
+            // uart_write_bytes(NUM_UART, (const char*)buff, strlen(buff)); 
 
-            ESP_LOGI(TAG, "datos enviados %s", buff);
-            memset(buff,0, sizeof(buff));
+            // ESP_LOGI(TAG, "datos enviados %s", buff);
+            // memset(buff,0, sizeof(buff));
+
+            char buff[11];
+            sprintf(buff, "%d.%d", tmp.integer, tmp.decimal);
+            
+            //Enviar SOLO el dato, sin texto adicional
+            uart_write_bytes(NUM_UART, (const char*)buff, strlen(buff));
+            
+            // Opcional: agregar delimitador para facilitar parseo
+            uart_write_bytes(NUM_UART, "\n", 1);  // Nueva línea como fin de dato
+            
+            // Limpiar buffer
+            memset(buff, 0, sizeof(buff));
+
 
         }
         else{

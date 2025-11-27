@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>labSAFE - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header>
+            <h1>labSAFE Dashboard</h1>
+            <div class="status">
+                <span class="online">● ONLINE</span>
+            </div>
+        </header>
+
+        <main>
+            <div class="card temp-card">
+                <h2>Temperatura Actual</h2>
+                <div class="temp-display">
+                    <span id="temp-value">--.-</span>
+                    <span class="temp-unit">C</span>
+                </div>
+                <div class="temp-status" id="temp-status">
+                    Esperando datos...
+                </div>
+            </div>
+
+            <div class="card info-card">
+                <h3>Información del Sistema</h3>
+                <p><strong>Modo:</strong> Access Point</p>
+                <p><strong>Red:</strong> TempGuard-3N</p>
+                <p><strong>Estado:</strong> <span class="active">Activo</span></p>
+            </div>
+        </main>
+
+        <footer>
+            <a href="/logout" class="logout-btn">Cerrar Sesión</a>
+        </footer>
+    </div>
+
+    <script>
+        // Conectar a Server-Sent Events
+        const eventSource = new EventSource('/events');
+        
+        eventSource.onmessage = function(event) {
+            const temp = parseFloat(event.data).toFixed(1);
+            const tempValue = document.getElementById('temp-value');
+            const tempStatus = document.getElementById('temp-status');
+            
+            tempValue.textContent = temp;
+            
+            // Cambiar color según temperatura
+            if(temp < 20) {
+                tempValue.style.color = '#3498db';
+                tempStatus.textContent = '>>>Temperatura baja<<<';
+                tempStatus.className = 'temp-status cold';
+            } else if(temp > 30) {
+                tempValue.style.color = '#e74c3c';
+                tempStatus.textContent = '>>>Temperatura alta<<<';
+                tempStatus.className = 'temp-status hot';
+            } else {
+                tempValue.style.color = '#2ecc71';
+                tempStatus.textContent = 'Temperatura normal';
+                tempStatus.className = 'temp-status normal';
+            }
+        };
+
+        eventSource.onerror = function(err) {
+            console.error("Error SSE:", err);
+            document.getElementById('temp-status').textContent = 'Sin conexion!';
+        };
+    </script>
+</body>
+</html>
