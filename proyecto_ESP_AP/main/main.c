@@ -42,6 +42,13 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
+//MACROS UART 2
+//UART 2 PINS
+#define UART2_TX 17 //TX2
+#define UART2_RX 16 //RX2
+#define UART_NUM2 UART_NUM_2 //UART PUERTO 2
+
+
 //varibales 
 extern QueueHandle_t event_uart; //cola que recibe los datos de UART. 
 QueueHandle_t send_temp;
@@ -105,6 +112,10 @@ void app_main(void)
     //seccion de UART 
 
     init_uart(UART_DEMON_TMP,TX_PIN_TMP,RX_PIN_TMP,UART_DATA_8_BITS,UART_PARITY_DISABLE,UART_STOP_BITS_1);
+
+    //UART2 PARA RFID
+
+    init_uart(UART_NUM2,UART2_TX,UART2_RX,UART_DATA_8_BITS,UART_PARITY_DISABLE,UART_STOP_BITS_1);
 
 
     //inicamos la tarea la cual se encarga de estar esperando a que se reciba lago por UART. 
