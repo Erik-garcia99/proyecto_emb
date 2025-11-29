@@ -14,7 +14,7 @@ extern QueueHandle_t event_uart;
 
 
 //definiciones de funciones 
-
+// char buffer_RFID[128];
 
 /**
  * 

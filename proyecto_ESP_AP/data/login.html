@@ -11,29 +11,75 @@
         <h1>labSAFE</h1>
         <p class="subtitle">Sistema de Gestion de Temperatura</p>
         
-        <form action="/login" method="POST">
-            <div class="input-group">
-                <label for="rfid">Identificación RFID:</label>
-                <input type="text" id="rfid" name="rfid" required 
-                       placeholder="Acerca tu tarjeta RFID">
-            </div>
-            
-            <button type="submit">ACCEDER</button>
+        <!-- Formulario oculto para envío automático -->
+        <form id="loginForm" action="/login" method="POST" style="display: none;">
+            <input type="text" id="rfidHidden" name="rfid" value="">
         </form>
         
-        <p class="info">* Para prueba: ingresa "RFID123"</p>
+        <!-- Interfaz visible -->
+        <div class="input-group">
+            <label for="rfidDisplay">Identificación RFID:</label>
+            <input type="text" id="rfidDisplay" 
+                   placeholder="Acerca tu tarjeta RFID..." 
+                   autofocus autocomplete="off">
+        </div>
         
-        <div id="error-message" class="error">
-            <p>Acceso denegado. Tarjeta no valida.</p>
+        <div id="status-message" class="status">
+            <p>Esperando tarjeta...</p>
+        </div>
+        
+        <div id="error-message" class="error" style="display: none;">
+            <p>❌ Acceso denegado. Tarjeta no válida.</p>
         </div>
     </div>
 
     <script>
-        // Mostrar error si existe en la URL
+        const rfidDisplay = document.getElementById('rfidDisplay');
+        const rfidHidden = document.getElementById('rfidHidden');
+        const loginForm = document.getElementById('loginForm');
+        const statusMsg = document.getElementById('status-message');
+        const errorMsg = document.getElementById('error-message');
+
+        // Limpieza inicial
         const urlParams = new URLSearchParams(window.location.search);
         if(urlParams.has('error')){
-            document.getElementById('error-message').style.display = 'block';
+            errorMsg.style.display = 'block';
+            statusMsg.style.display = 'none';
+            setTimeout(() => {
+                errorMsg.style.display = 'none';
+                statusMsg.style.display = 'block';
+            }, 3000);
         }
+
+        // Función para procesar RFID
+        function processRFID(uid) {
+            if(uid.length < 8) return; // Mínimo 8 caracteres
+            
+            statusMsg.innerHTML = '<p>🔍 Procesando...</p>';
+            rfidHidden.value = uid;
+            loginForm.submit();
+        }
+
+        // Evento para lectores RFID que simulan teclado
+        rfidDisplay.addEventListener('keypress', function(e) {
+            // La mayoría de lectores envían Enter al final
+            if(e.key === 'Enter') {
+                e.preventDefault();
+                processRFID(this.value.trim());
+            }
+        });
+
+        // Evento para captura en tiempo real (opcional)
+        rfidDisplay.addEventListener('input', function() {
+            const value = this.value.trim();
+            // Si el UID tiene formato XX:XX:XX:XX (11 chars) o similar
+            if(value.length >= 11 && (value.match(/:/g) || []).length >= 2) {
+                processRFID(value);
+            }
+        });
+
+        // Enfocar automáticamente
+        window.addEventListener('load', () => rfidDisplay.focus());
     </script>
 </body>
 </html>

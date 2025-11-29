@@ -59,6 +59,7 @@ static const char *TAG = "ESP_AP";
 extern void send_temperature_to_clients(const char* temp);
 extern void notify_new_temperature(void);
 
+// extern EventGroupHandle_t auth_event_group;
 
 //tareas 
 // void task_main(void *params);
@@ -70,16 +71,43 @@ void uart_task_read_temp(void *params);
 void receive_RFID_task();
 uint8_t compare_RFID();
 
+void receive_RFID_task_2(void);
+
+
 //BUFFER RFID
-char buffer_RFID[128];   
+// char buffer_RFID[128];   
 
 //LLAVES
-#define KEYS 2
-#define uid_len 12
-char llaves[KEYS][uid_len] = {
+// #define KEYS 2
+// #define uid_len 12
+// char llaves[KEYS][uid_len] = {
+//     "E3:14:49:01",
+//     "EA:9A:CD:05",
+// };
+
+const char llaves_2[KEYS][uid_len] = {
     "E3:14:49:01",
     "EA:9A:CD:05",
 };
+
+#define BUF_SIZE 1024
+
+char buffer_RFID_2[128];
+
+
+void uart2_init(void) {
+    uart_config_t uart_config = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
+    };
+    uart_driver_install(UART_NUM_2, BUF_SIZE, 0, 0, NULL, 0);
+    uart_param_config(UART_NUM_2, &uart_config);
+    uart_set_pin(UART_NUM_2, UART2_TX, UART2_RX, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+}
+
 
 
 
@@ -115,8 +143,8 @@ void app_main(void)
 
     //UART2 PARA RFID
 
-    init_uart(UART_NUM2,UART2_TX,UART2_RX,UART_DATA_8_BITS,UART_PARITY_DISABLE,UART_STOP_BITS_1);
-
+    // init_uart(UART_NUM2,UART2_TX,UART2_RX,UART_DATA_8_BITS,UART_PARITY_DISABLE,UART_STOP_BITS_1);
+    uart2_init();
 
     //inicamos la tarea la cual se encarga de estar esperando a que se reciba lago por UART. 
     //debe de ener un numero de prioridad alto porque es lo que estara mostrando dentro de la pagina.
@@ -133,24 +161,9 @@ void app_main(void)
     //TAREA RECIBIR RFID
     xTaskCreate(receive_RFID_task, "Receive_RFID",2048,NULL,5,NULL); //recibe RFID
 
+    // xTaskCreate()  19
+
 }
-
-
-// static void task_main(void *params){
-
-
-//     while(1){
-
-
-
-
-
-
-//     }
-
-
-// }
-
 
 
 void uart_task_read_temp(void *params){
@@ -235,11 +248,26 @@ void show_tmep_task(void *params){
     }
 }
 
+// uint8_t compare_RFID()
+// {
+//     for (int j = 0; j < KEYS; j++)
+//     {
+//         if (strcmp(buffer_RFID, llaves[j]) == 0)
+//         {
+//             ESP_LOGI(TAG, "ACCESO PERMITIDO");
+//             return 1;
+//         }
+//     }
+
+//     ESP_LOGI(TAG, "ACCESO DENEGADO");
+//     return 0;
+// }
+
 uint8_t compare_RFID()
 {
     for (int j = 0; j < KEYS; j++)
     {
-        if (strcmp(buffer_RFID, llaves[j]) == 0)
+        if (strcmp(buffer_RFID_2, llaves_2[j]) == 0)
         {
             ESP_LOGI(TAG, "ACCESO PERMITIDO");
             return 1;
@@ -250,20 +278,60 @@ uint8_t compare_RFID()
     return 0;
 }
 
-void receive_RFID_task()
+
+
+void receive_RFID_task_2(void)
 {
-    uint8_t data[12];
-
-    while(1){
-
-        int len = uart_read_bytes(UART_NUM_2, data, 11, portMAX_DELAY);
-
-        if (len > 0) {
-            data[len] = '\0';              // terminar la cadena recibida
-            strcpy(buffer_RFID, (char*)data);   // guardar en la variable global
+    char uid[uid_len] = {0};
+    
+    while(1)
+    {
+        int len = uart_read_bytes(UART_DEMON_RFID, (uint8_t*)uid, uid_len-1, pdMS_TO_TICKS(100));
+        
+        if(len > 0)
+        {
+            uid[len] = '\0';
+            
+            // Limpia caracteres no ASCII
+            for(int i=0; uid[i]; i++) {
+                if(uid[i] < 32 || uid[i] > 126) uid[i] = '\0';
+            }
+            char* clean_uid = strtok(uid, "\r\n ");
+            
+            if(clean_uid && strlen(clean_uid) >= 8)
+            {
+                ESP_LOGI(TAG, "RFID recibido: '%s'", clean_uid);
+                
+                notify_rfid_auth(clean_uid);
+                
+                 
+            }
         }
-
-        ESP_LOGI(TAG, "UARTO-2 RFID recibido: %s", buffer_RFID);
-        compare_RFID();
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
+
+
+    void receive_RFID_task()
+    {
+        uint8_t data[12];
+
+        while(1){
+
+            int len = uart_read_bytes(UART_NUM_2, data, 11, portMAX_DELAY);
+
+            if (len > 0) {
+                data[len] = '\0';              // terminar la cadena recibida
+                strcpy(buffer_RFID_2, (char*)data);   // guardar en la variable global
+            }
+
+            ESP_LOGI(TAG, "UARTO-2 RFID recibido: %s", buffer_RFID_2);
+
+            if(compare_RFID()){
+                receive_RFID_task_2();
+        
+            }
+
+
+        }
+    }

@@ -12,10 +12,15 @@
 #define AUTH_OK_BIT BIT0
 #define AUTH_CHANGED_BIT BIT1
 #define NEW_TEMP_BIT BIT0
+#define ACCES BIT2
 
+#define KEYS 2
+#define uid_len 12
 
+#define RFID_UID_LEN 12
+#define MAX_RFID_KEYS 10
 
-
+// extern char llaves[KEYS][uid_len];
 
 /**
  * 
@@ -42,6 +47,20 @@ void wifi_init_softap(void);
  * 
 */
 void start_web_server(void);
+
+
+/**
+ * @brief Notifica al sistema web que se ha detectado un RFID válido
+ * 
+ * @param uid Cadena con el UID del RFID autenticado
+ */
+void notify_rfid_auth(const char* uid);
+
+/**
+ * @brief Cierra la sesión actual
+ */
+void logout_user(void);
+
 
 
 
@@ -107,6 +126,9 @@ esp_err_t css_get_handler(httpd_req_t *req);
 bool is_authenticated(void); //verifica autenticacion
 
 
+bool validate_rfid_uid(const char* uid);
+
+void init_rfid_keys(void);
 
 
 #endif

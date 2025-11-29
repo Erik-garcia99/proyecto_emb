@@ -2,7 +2,7 @@
 //libereias estandares
 #include<string.h>
 #include<stdlib.h>
-
+#include <ctype.h>
 
 // FreeRTOS
 #include<freertos/FreeRTOS.h>
@@ -37,6 +37,8 @@ static volatile bool auth_status = false;
 static EventGroupHandle_t auth_event_group = NULL;
 static EventGroupHandle_t temp_event_group = NULL;
 
+char buffer_RFID[128];
+
 
 #define MAX_SSE_CLIENTS 5
 typedef struct {
@@ -45,6 +47,14 @@ typedef struct {
 } sse_client_t;
 
 static sse_client_t sse_clients[MAX_SSE_CLIENTS] = {0};
+
+// static volatile bool auth_status = false;
+static char current_uid[20] = {0}; // Para guardar el UID autenticado
+
+const char llaves[KEYS][uid_len] = {
+    "E3:14:49:01",
+    "EA:9A:CD:05",
+};
 
 
 void init_spiffs(void){
@@ -182,6 +192,50 @@ void notify_new_temperature(void){
     }
 }
 
+bool validate_rfid_uid(const char* uid) {
+    if(uid == NULL || strlen(uid) == 0) return false;
+    
+    for(int i = 0; i < KEYS; i++) {
+        if(strcmp(uid, llaves[i]) == 0) {
+            ESP_LOGI(TAG, "UID VÁLIDO: %s", uid);
+            return true;
+        }
+    }
+    ESP_LOGW(TAG, " UID NO AUTORIZADO: %s", uid);
+    return false;
+}
+
+
+
+
+
+void notify_rfid_auth(const char* uid){
+    
+    if(uid == NULL) return;
+    
+    // Actualizar estado
+    auth_status = true;
+    strncpy(current_uid, uid, sizeof(current_uid)-1);
+    
+    // Notificar evento
+    if(auth_event_group != NULL){
+        xEventGroupSetBits(auth_event_group, AUTH_OK_BIT | AUTH_CHANGED_BIT);
+    }
+    
+    ESP_LOGI(TAG, "Autenticación RFID exitosa. UID: %s", uid);
+}
+
+
+
+void logout_user(void){
+    auth_status = false;
+    memset(current_uid, 0, sizeof(current_uid));
+    if(auth_event_group != NULL){
+        xEventGroupClearBits(auth_event_group, AUTH_OK_BIT);
+        xEventGroupSetBits(auth_event_group, AUTH_CHANGED_BIT);
+    }
+    ESP_LOGI(TAG, "Sesión cerrada");
+}
 
 
 
@@ -191,6 +245,14 @@ void notify_new_temperature(void){
 //manjador GET para la pagina de login
 
 esp_err_t login_get_handler(httpd_req_t *req){
+    // Verificar si ya está autenticado por RFID
+    if(auth_status){
+        httpd_resp_set_status(req, "302 Found");
+        httpd_resp_set_hdr(req, "Location", "/dashboard");
+        httpd_resp_send(req, NULL, 0);
+        return ESP_OK;
+    }
+    
     FILE *file = fopen("/spiffs/login.html", "r");
     if(file == NULL){
         ESP_LOGE(TAG, "No se encuentra login.html");
@@ -208,42 +270,75 @@ esp_err_t login_get_handler(httpd_req_t *req){
     return ESP_OK;
 }
 
-//simulacion, manjeador POST para procesa RFID
+void url_decode(const char *src, char *dest, size_t dest_size) {
+    char a, b;
+    size_t i = 0;
+    while(*src && i < dest_size - 1) {
+        if((*src == '%') && ((a = src[1]) && (b = src[2])) && (isxdigit(a) && isxdigit(b))) {
+            if(a >= 'a') a -= 'a'-'A';
+            if(a >= 'A') a -= ('A' - 10);
+            else a -= '0';
+            if(b >= 'a') b -= 'a'-'A';
+            if(b >= 'A') b -= ('A' - 10);
+            else b -= '0';
+            dest[i++] = 16*a+b;
+            src+=3;
+        } else if(*src == '+') {
+            dest[i++] = ' ';
+            src++;
+        } else {
+            dest[i++] = *src++;
+        }
+    }
+    dest[i] = '\0';
+}
+
 esp_err_t login_post_handler(httpd_req_t *req){
-    char buf[32];
-    int ret = httpd_req_recv(req, buf, MIN(req->content_len, sizeof(buf)));
+    char buf[64]; // Aumentado para mayor seguridad
+    int ret = httpd_req_recv(req, buf, MIN(req->content_len, sizeof(buf)-1));
     
     if(ret <= 0){
-        httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
+        ESP_LOGE(TAG, "Error recibiendo datos del POST");
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
     }
     
     buf[ret] = '\0';
-    
-    // Simulación: RFID válido = "RFID123"
-    if(strstr(buf, "rfid=RFID123") != NULL){
-        // Actualizar estado volatile
-        auth_status = true;
-        // Notificar evento
-        xEventGroupSetBits(auth_event_group, AUTH_OK_BIT | AUTH_CHANGED_BIT);
+    ESP_LOGI(TAG, "Datos recibidos: '%s'", buf); // LOG IMPORTANTE
+
+    // Verificar formato: "rfid=UID"
+    if(strncmp(buf, "rfid=", 5) == 0) {
+        char *rfid_value = buf + 5;
         
-        // Establecer cookie
-        httpd_resp_set_hdr(req, "Set-Cookie", "auth=1; Path=/");
-        httpd_resp_set_status(req, "302 Found");
-        httpd_resp_set_hdr(req, "Location", "/dashboard");
-        httpd_resp_send(req, NULL, 0);
+        // Decodificar caracteres especiales (%3A -> :)
+        char decoded_uid[32];
+        url_decode(rfid_value, decoded_uid, sizeof(decoded_uid));
         
-        ESP_LOGI(TAG, "Autenticación exitosa!");
-        return ESP_OK;
+        ESP_LOGI(TAG, "RFID decodificado: '%s'", decoded_uid);
+        
+        if(validate_rfid_uid(decoded_uid)) {
+            notify_rfid_auth(decoded_uid);
+            
+            // RESPUESTA INMEDIATA Y CLARA
+            httpd_resp_set_status(req, "302 Found");
+            httpd_resp_set_hdr(req, "Location", "/dashboard");
+            httpd_resp_set_hdr(req, "Set-Cookie", "auth=1; Path=/; HttpOnly");
+            httpd_resp_send(req, NULL, 0);
+            
+            ESP_LOGI(TAG, "ACCESO CONCEDIDO - Redirigiendo a dashboard");
+            return ESP_OK;
+        }
     }
     
-    // RFID incorrecto
+    // ❌ ACCESO DENEGADO
+    ESP_LOGW(TAG, "Acceso denegado para: '%s'", buf);
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", "/?error=1");
     httpd_resp_send(req, NULL, 0);
-    ESP_LOGW(TAG, "Intento fallido");
     return ESP_FAIL;
 }
+
+
 
 
 
@@ -272,16 +367,35 @@ esp_err_t css_get_handler(httpd_req_t *req){
 
 
 //manjeador dashboard
-
+// Reemplaza dashboard_get_handler para verificar cookie
 esp_err_t dashboard_get_handler(httpd_req_t *req){
-  
+    // Verificar estado volatile primero
     if(!is_authenticated()){
-        httpd_resp_set_status(req, "302 Found");
-        httpd_resp_set_hdr(req, "Location", "/");
-        httpd_resp_send(req, NULL, 0);
-        return ESP_OK;
+        // Verificar cookie como fallback
+        char cookie[64] = {0};
+        size_t cookie_len = httpd_req_get_hdr_value_len(req, "Cookie");
+        
+        if(cookie_len > 0 && cookie_len < sizeof(cookie)) {
+            if(httpd_req_get_hdr_value_str(req, "Cookie", cookie, cookie_len + 1) == ESP_OK) {
+                if(strstr(cookie, "auth=1") != NULL) {
+                    // Restaurar sesión
+                    auth_status = true;
+                    ESP_LOGI(TAG, "Auth: Restaurado por cookie");
+                }
+            }
+        }
+        
+        // Si aún no está autenticado, redirigir
+        if(!is_authenticated()){
+            ESP_LOGW(TAG, "Auth: No autenticado - Redirigiendo a login");
+            httpd_resp_set_status(req, "302 Found");
+            httpd_resp_set_hdr(req, "Location", "/");
+            httpd_resp_send(req, NULL, 0);
+            return ESP_OK;
+        }
     }
 
+    ESP_LOGI(TAG, "Auth: Acceso concedido a dashboard");
     FILE *file = fopen("/spiffs/dashboard.html", "r");
     if(file == NULL){
         ESP_LOGE(TAG, "No se encuentra dashboard.html");
@@ -298,8 +412,6 @@ esp_err_t dashboard_get_handler(httpd_req_t *req){
     fclose(file);
     return ESP_OK;
 }
-
-
 
 //manjeador para tmepreatura
 
